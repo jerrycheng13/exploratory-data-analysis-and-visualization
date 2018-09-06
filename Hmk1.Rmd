@@ -1,0 +1,205 @@
+---
+title: "Homework 1"
+author: "Jinhan Cheng, jc4834@columbia.edu"
+date: 2018/01/29
+output:
+  prettydoc::html_pretty:
+    theme: tactile
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      message = FALSE)
+```
+
+
+*For all questions involving histograms, choose a sensible binwidth and breakpoints, unless otherwise indicated.*
+
+### 1. Income
+
+a) Describe in detail the features you observe in the boxplots below, plotted with data from the *ex0525* dataset, **Sleuth3** page. (see page 29 in *Graphical Data Analysis in R* for a list of features to concentrate on, and the numbered list on the bottom of page 43 for an example of how to describe features of a graph in words.) [5 points]
+
+#### Answer to Question 1.a
+
+* With the factor **Educ** increases, the overall variable **Income2005** increases
+
+* With the factor **Educ** increases, the width of the inner box increases, which means the interquartile range increases
+
+* There are certain numbers of high **Income2005** within each degree of factor **Educ**, which we call them outliers
+
+* For **Educ** that lie in **<12** and **13-15**, the outliers are more closed to the overall distribution than the other 3
+
+* The skew of the distributions are all right
+
+```{r 1a, echo=TRUE}
+#library
+library(tidyverse)
+library(ggplot2)
+library(data.table)
+library(prettydoc)
+library(gridExtra)
+#install.packages("Sleuth3")
+library(Sleuth3)
+# convert Educ from an integer to a factor, and make "<12" the first factor level 
+mydata <- ex0525 %>% 
+  dplyr::mutate(Educ = forcats::fct_relevel(Educ, "<12"))
+
+ggplot(mydata, aes(Educ, Income2005)) +
+  geom_boxplot() + 
+  coord_flip()   # for horizontal boxplots
+```
+
+b) Plot a histogram of the `Income2005` variable in the dataset referenced in part a). [3 points]
+
+#### Answer to Question 1.b
+
+```{r 1b, echo=TRUE}
+ggplot(mydata, aes(Income2005)) + geom_histogram(color = "black", fill = "lightblue", binwidth = 10000)
+```
+
+c) Use `+facet_wrap(~Educ)` to facet the histogram on education level. [3 points]
+
+#### Answer to Question 1.c
+
+```{r 1c, echo=TRUE}
+ggplot(mydata, aes(Income2005)) + geom_histogram(color = "black", fill = "lightblue", binwidth = 10000) +
+  facet_wrap(~Educ)
+```
+
+d) What do you learn from the histograms that wasn't apparent in the boxplots from question 1? [3 points]
+
+#### Answer to Question 1.d
+
+* Yes, with the histograms we can learn the groups with peaks and different peaks with different degree of factor **Educ**, and the exact **count**. However, using barplot, we don't have the **count**
+
+* With the histogramss, we could have a more intuitively perception of the distribution
+
+### 2. Respiratory Rates
+
+a) Plot right closed and right open histograms for each of the two variables in the *ex0824* dataset in the **Sleuth3** package using default binwidths and breaks. (4 histograms in total). [4 points]
+
+#### Answer to Question 2.a
+
+```{r 2a, echo=TRUE}
+dat2 <- ex0824
+hist(dat2$Age, col = "lightblue", xlab = "Age (right closed)", main="")
+hist(dat2$Age, col = "lightblue", right = FALSE, xlab = "Age (right open)", main="")
+hist(dat2$Rate, col = "lightblue", xlab = "Rate (right closed)", main="")
+hist(dat2$Rate, col = "lightblue", right = FALSE, xlab = "Rate (right open)", main="")
+```
+
+b) For which variable, `Age` or `Rate`, do the two versions differ more? Why? [3 points]
+
+#### Answer to Question 2.b
+
+* For **Rate**, the two versions differ more, and it is because of the fact that the values in **Rate** are integers, and the binwidth is integer too. In this case, the way we count a certain **Rate** by **by right open** and **by right closed** will cause obvious difference. 
+
+* As for **Age**, the difference caused by **right open** and **right closed** are created when the value of **Age** are integers, and most of the **Age**s are decimals
+
+c) Redraw the `Age` histograms with different parameters so that the right closed and right open versions are identical. [3 points]
+
+#### Answer to Question 2.c
+
+```{r 2c, echo=TRUE}
+hist(dat2$Age, col = "lightblue", breaks=seq(0.01, 40.01, by = 2), xlab = "Age (right closed)", main = "")
+hist(dat2$Age, col = "lightblue", breaks=seq(0.01, 40.01, by = 2), right = FALSE, xlab = "Age (right open)", main = "")
+```
+
+### 3. Movie budgets
+
+Are there rounding patterns in the `budget` variable of the *movies* in the **ggplot2movies** package? If so, what are the patterns? (Note: according to the textbook this dataset is in the **ggplot2** package, but it has since been moved to a separate package.) Support your conclusions with graphical evidence. You are encouraged to break the variable down into different budget ranges and consider them separately. [8 points] 
+
+#### Answer to Question 3
+
+* First we make the subgroups by quantile, and we cut with 2.5e+05, 3.0e+06, 1.5e+07, 2.0e+08 
+
+* Simply plot the histogram graph, we could see an overall right skewed distribution, which means it has a descending tendency with the **budget** increases, and most of the movies have their budgets lie between 0 and 5.0e+07
+
+* All of the plot of the subgroups are right skewed, and each of them has peaks, for **budget** lie between the first 3 groups, both of the groups have more than one obvious peak, for the last group, their is only one obvious peak.
+
+After all, the **budget** has the kind of rounding pattern with several peaks, right-skewed distribution   
+
+```{r 3, echo=TRUE}
+library(ggplot2movies)
+dat3 <- movies
+dat3 <- as.data.table(dat3)
+quantile(dat3$budget,c(0.25,0.5,0.75,1), na.rm = TRUE)
+dat31 <- dat3[budget < quantile(budget, 0.25,na.rm=TRUE)]
+dat32 <- dat3[budget < quantile(budget, 0.5,na.rm=TRUE) & budget >= quantile(budget, 0.25,na.rm=TRUE)]
+dat33 <- dat3[budget < quantile(budget, 0.75,na.rm=TRUE) & budget >= quantile(budget, 0.5,na.rm=TRUE)]
+dat34 <- dat3[budget >= quantile(budget, 0.75,na.rm=TRUE)]
+ggplot(dat3, aes(budget)) + geom_histogram(aes(y = ..density..), binwidth = 1000000) + geom_density()
+g31 <- ggplot(dat31, aes(budget)) + geom_histogram(aes(y = ..density..)) + geom_density()
+g32 <- ggplot(dat32, aes(budget)) + geom_histogram(aes(y = ..density..)) + geom_density()
+g33 <- ggplot(dat33, aes(budget)) + geom_histogram(aes(y = ..density..)) + geom_density()
+g34 <- ggplot(dat34, aes(budget)) + geom_histogram(aes(y = ..density..)) + geom_density()
+grid.arrange(g31, g32, g33, g34)
+```
+
+### 4. Finches
+
+a) Plot separate density histograms of the beak depth of the finches in *case0201* from the **Sleuth3** package, with density curves overlaid as on page 34 of the textbook. (However, do this by facetting on `Year` rather than using `grid.arrange`). [3 points]
+
+#### Answer to Question 4.a
+
+```{r 4a, echo=TRUE}
+dat4 <- case0201
+ggplot(dat4, aes(Depth)) +
+geom_histogram(aes(y = ..density..), binwidth=0.5) + geom_density() + xlab("Depth") + ylab("") + facet_wrap(~Year)
+```
+
+b) Plot both density curves on the same graph to facilitate comparison. Make 1976 yellow and 1978 blue.  Use alpha blending so the fills are transparent. [3 points]
+
+#### Answer to Queation 4.b
+
+```{r 4b, echo=TRUE}
+dat4 <- as.data.table(dat4)
+ggplot() + geom_density(aes(dat4$Depth[dat4$Year==1976]), colour="yellow", fill="yellow", alpha=0.25) + 
+  geom_density(aes(dat4$Depth[dat4$Year==1978]), colour="blue", fill="blue", alpha=0.25) +
+  xlab("Depth")
+```
+
+c) Based on your graphs in parts a) and b), describe how the distributions differ by year. [3 points]
+
+#### Answer to Question 4.c
+
+* The peak of the distribution increases and shifts rightly gradually as time goes by
+
+* The overall distribution is moving rightly as time goes by
+
+d) What is the cause of the difference according to the information in the help file? [3 points]
+
+#### Answer to  Question 4.d
+
+* In one of those years, 1977, a severe drought caused vegetation to wither, and the only remaining food source was a large, tough seed, which the finches ordinarily ignored.
+
+* With larger and strong beaks to opening these tough seeds, the finches with the gene of larger and strong beaks are more likely to survive, and it cause these offsprings to have the same kind of beaks
+
+```{r 4d, echo=TRUE}
+help(case0201)
+```
+
+### 5. Salary
+
+Is the `Salary` variable in the *case0101* of **Sleuth3** normally distributed?  Use two different graphical methods to provide evidence. [6 points]
+
+#### Answer to Question 5
+
+* It seems normally distributed, we can provide evidence using graphical methods such as **qqnorm** and **density histogram and curve**. However, there are only 93 observations, we would be more certain with the conclusion if we have more observations.
+
+```{r 5, echo=TRUE}
+dat5 <- case0102
+# method1
+qqnorm(dat5$Salary)
+qqline(dat5$Salary)
+
+# method2
+ggplot(dat5, aes(x=Salary)) + 
+  geom_histogram(aes(y=..density.., fill=..count..), colour = "green", fill = "blue", alpha=0.25) +
+  geom_density(colour="black", fill="yellow", alpha=0.25) + 
+  stat_function(fun=dnorm, color="red", args=list(mean=mean(dat5$Salary), sd=sd(dat5$Salary)))
+
+
+```
+
+

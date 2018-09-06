@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <style>
+    div.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 30px;
+    height: 30px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: transparent;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0.8;
+    }
+    </style>
+    <title>Q1 Part E</title>
+    <script src="https://d3js.org/d3.v4.min.js">  </script>
+
+  </head>
+  <body>
+    <h2>1975</h2>
+    <p>Click here to change year</p>
+    <script type="text/javascript">
+
+      //Width and height
+      var w = 500;
+      var h = 300;
+      var margin = {top: 25, right: 25, bottom: 25, left: 25};
+      var innerHeight = h - margin.top - margin.bottom;
+      var innerWidth = w - margin.left - margin.right;
+
+      var dataset = [{letter: "A", amount75: 34, amount85: 78},
+                     {letter: "B", amount75: 10, amount85: 91},
+                     {letter: "C", amount75: 14, amount85: 38}];
+
+
+      var svg = d3.select("body")
+		  .append("svg")
+		  .attr("width", w)
+		  .attr("height", h);
+		  
+      svg.append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", w)
+          .attr("height", h)
+          .attr("fill", "white");
+		          
+	  var dotdata = dataset;
+		  
+	  var xScale = d3.scaleLinear()
+          .domain([0, d3.max(dotdata, function(d){
+          return (d.amount75 < d.amount85) ? d.amount85 : d.amount75 })])
+          .range([0, innerWidth]);
+          
+      var yScale = d3.scaleBand()
+          .domain(dotdata.map(function(d) { return d.letter }))
+          .rangeRound([innerHeight, 0], 0.2)
+          .paddingInner(.1);
+      var xAxis = d3.axisBottom()                   
+          .scale(xScale);
+          
+      var yAxis = d3.axisLeft()
+          .scale(yScale);
+   
+          
+// add fainted lines             
+      var lines = svg.append("g")
+          .attr("transform", `translate (${margin.left}, ${margin.top})`) 
+          .selectAll("line")
+          .data(dotdata);         
+  
+      lines.enter().append("line")
+          .style("stroke", "lightgrey")
+          .style("stroke-width", "1.5px")
+          .attr("x1", 0)
+          .attr("y1", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+          .attr("x2", innerWidth)
+          .attr("y2", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 }); 
+              
+// add tooltip
+ 
+      var div = d3.select("body").append("div")
+          .attr("class", "tooltip")
+          .style("opacity", 0);
+      
+// add dots          
+      var dots = svg.append("g")
+          .attr("id", "plot")   
+          .attr("transform", `translate (${margin.left}, ${margin.top})`)                    
+          .selectAll("dot")
+          .data(dotdata);
+          
+      dots.enter().append("circle")
+          .attr("cx", function(d) { return xScale(d.amount75) })
+          .attr("cy", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+          .attr("r", 3)
+          .attr("fill", "black")
+          .on("mouseover", function(d) {
+            div.transition()
+               .duration(200)
+               .style("opacity", .8);
+            div.html(d.amount75+ "<br/>" )
+               .style("left", (d3.event.pageX) + "px")
+               .style("top", (d3.event.pageY - 30) + "px");
+            })
+          .on("mouseout", function(d) {
+            div.transition()
+               .duration(500)
+               .style("opacity", 0);
+           });
+
+          
+      svg.append("g")    
+         .attr("class", "yAxis")
+         .attr("transform", `translate (${margin.left}, ${h - margin.bottom})`)                            
+         .call(xAxis);
+         
+      svg.append("g")
+         .attr("class", "yAxis")
+         .attr("transform", `translate (${margin.left}, ${margin.top})`) 
+         .call(yAxis);
+
+// change year
+      </script>
+      <script>
+      
+      d3.select("p")
+        .on("click", function () {
+        
+        var h2 = d3.select("h2").text();
+        
+        if (h2 == "1975") {
+		    
+           d3.selectAll("circle")
+             .transition()
+             .duration(1000)
+             .attr("cx", function(d) { return xScale(d.amount85) })
+             .attr("cy", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+             .attr("r", 3)
+             .attr("fill", "blue");
+             
+           d3.selectAll("circle")
+             .on("mouseover", function(d) {
+               div.transition()
+                  .duration(200)
+                  .style("opacity", .8);
+               div.html(d.amount85+ "<br/>" )
+                  .style("left", (d3.event.pageX) + "px")
+                  .style("top", (d3.event.pageY - 30) + "px");
+               })
+             .on("mouseout", function(d) {
+               div.transition()
+                  .duration(500)
+                  .style("opacity", 0);
+             });
+             
+           d3.select("h2").text("1985");     // change year text
+         
+         } else {
+         
+           d3.selectAll("circle")
+             .transition()
+             .duration(1000)
+             .attr("cx", function(d) { return xScale(d.amount75) })
+             .attr("cy", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+             .attr("r", 3)
+             .attr("fill", "black");
+             
+             d3.selectAll("circle")
+             .on("mouseover", function(d) {
+               div.transition()
+                  .duration(200)
+                  .style("opacity", .8);
+               div.html(d.amount75+ "<br/>" )
+                  .style("left", (d3.event.pageX) + "px")
+                  .style("top", (d3.event.pageY - 30) + "px");
+               })
+             .on("mouseout", function(d) {
+               div.transition()
+                  .duration(500)
+                  .style("opacity", 0);
+             });
+             
+           d3.select("h2").text("1975");     // change year text
+
+         };
+
+      });
+      
+    </script>
+  </body>
+</html>

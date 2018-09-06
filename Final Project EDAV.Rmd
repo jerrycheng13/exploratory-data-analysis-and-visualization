@@ -1,0 +1,684 @@
+---
+title: "EDAV Project"
+date: "4/26/2018"
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+---
+
+<h3 style="text-align:right">----Analysis of U.S Tax revenue </h3>   
+
+# 1. Introduction
+## a. The reason that we chose this topic is that:
+<font size=3>
+U.S. is the largest economy in the world in terms of nominal GDP for more than ten years, we are so interested to know what drives U.S. goes so far, what is the patterns of tax revenue in different states and years. To analyze tax revenue patterns in U.S., we could get better understanding of U.S. economy.
+</font>
+
+## b. Our team members are:  
+
+<font size=3>
+Jinhan Cheng(jc4834), Jing Wu(jw3233), Zhaoyue Bi(zb2225), we collaborate together to research topic, collect data and analyze data.
+</font> 
+
+
+------
+# 2. Description of Data
+## a. How the data was collected and accessed:   
+
+<font size=3>
+i. The data was collected from the government, we find the data in the [United States Census Bureau website](https://www.census.gov/en.html), which provides widely population and economy public data about U.S. The data we use is [Annual Survey of State Government Tax Collections](https://www.census.gov/programs-surveys/stc/data/datasets.All.html), which consists of 50 states\' tax revenue in 25 classifications from 1951 to 2016.  
+
+ii. Also, to analyze the specific situation in NYC, we get a more detailed tax revenue data from 1980 to 2014 in New York City, from the [NYC Open Data website](https://opendata.cityofnewyork.us).  
+
+iii. To analyze the average tax revenue, we introduce another data that shows the estimated population in each state. We find the data in the [United States Census Bureau website](https://www.census.gov/en.html). 
+
+</font>  
+
+## b. Noteworthy features of the data:    
+
+<font size=3>  
+
+i.	The data was collected from the government, which is trust worthy and accurate.  
+
+ii.	The data consists of information in each state and tax classification from 1951 to 2016, which enables us to get both bird view and detailed information about the tax income.  
+
+iii. To analyze the data of tax revenue, we could develop a deep understanding of American economy and thus solve our questions. This data\'s problem is as U.S. do not conduct another survey of population after 2000, we could only estimate the population in 2016 based on 2000 year's survey.  
+
+</font>  
+
+***********
+# 3. Analysis of Data Quality 
+## a. The quality of the data:   
+
+<font size=3>
+The data has some missing values, though the overall quality of the data is still good. For this data, the original data use "0" to represent missing value, it could be messed with the real "0" value which means that there might be states don't collect such kind of tax, or say tax free. However, we couldn't address this problem, and we could only use "0" as missing value. On the one hand, some features have few missing values in some state, which have few impact. On the other hand, for some data have a lot missing values, we could represent them by using other data, which will also give us enough information.  
+</font>  
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = FALSE, eval = TRUE, comment="", warning = FALSE, message = FALSE, tidy.opts=list(width.cutoff=55), tidy = TRUE)
+```
+```{r library}
+Sys.setenv(TZ = "America/New_York")
+library(data.table)
+library(DT)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(tidyquant)
+library(viridis)
+library(skimr)
+library(extracat)
+library(geofacet)
+library(plotly)
+library(data.tree)
+library(networkD3)
+```
+```{r read data}
+dat <- fread(input = "STC_Historical_DB (2016).csv")
+code <- as.data.table(t(dat[1,5:36]),keep.rownames = TRUE)
+colnames(code) <- c("code","item") 
+dat <- dat[-1,]
+dat <- dat %>% filter(dat$Year >= 2006)
+dat$Name <- substr(dat$Name,1,2)
+
+```
+
+```{r function To_int}
+To_int <- function(x){
+  return(as.integer(gsub(',', '', x)))
+}
+```
+## b. The data has some missing data:  
+```{r check missing data, fig.width=20, fig.height=16}
+levels(code$code) <- c(code$code)
+code$code <- as.factor(code$code)
+dat2016 <- dat %>% filter(dat$Year == 2016)
+levels(dat2016$Name) <- dat2016$Name
+dat2016$Name <- as.factor(dat2016$Name)
+dat2016_tidy <- dat2016 %>%
+    gather(item_code, value, C105:T99) %>% 
+    mutate(missing = ifelse(value==0, "yes", "no"))
+dat2016_tidy$item_code <- as.factor(dat2016_tidy$item_code)
+levels(dat2016_tidy$item_code) <- levels(code$code)
+
+ggplot(dat2016_tidy, aes(x = item_code, y = fct_rev(`Name`), fill = missing)) +
+  geom_tile(color = "white") + 
+  ggtitle("US Tax 2016") +
+  scale_fill_viridis_d() + 
+  theme_bw()
+
+dat2016_n <- dat2016[,-c(1,2,4)]
+dat2016_n[dat2016_n == 0] <- NA
+visna(dat2016_n)
+```
+
+## i.Based on the features, we could identify them as follows:  
+<font size=3>  
+
+a.	More than a half states do not have the value of T99(Taxes, NEC)  
+
+b.	1/3 data of T50(Death and Gift Taxes), T51(Documentary and Stock Transfer Taxes), T53(Severance Taxes) are missing, but as C130 represents the sum of them, and we could get C130 without any missing value.  
+
+c.	1/3 data of T27(Public Utilities License) and T01(Property Taxes) are missing, which means a that we may lose some accuracy in these features.  
+
+</font>  
+
+## ii.Based on the missing patterns, we could identify 4 patterns having more data:   
+
+<font size=3>  
+
+Based on the missing patterns, we could identify 4 patterns having more data:  
+
+a.	Fortunately, the first pattern is all data could be collected without missing.  
+
+b.	T53, T99 are missing, which means Public Utilities License, Public Utilities License are missing.  
+
+c.	T27, T53, T99 are missing, which means Public Utilities License, Severance Taxes, Public Utilities License are missing.  
+
+d.	T14, T51, T99 are missing, which means Pari-mutuels Sales Tax, Documentary and Stock Transfer Taxes, Taxes, NEC are missing.  
+
+</font>  
+
+## c. For easy understanding the meaning of data, we give the structure of it:  
+```{r data tree}
+tree <- Node$new("C105")
+    T01 <- tree$AddChild("T01")
+   C107 <- tree$AddChild("C107")
+      T09 <- C107$AddChild("T09")
+     C109 <- C107$AddChild("C109")
+        T10 <- C109$AddChild("T10")
+        T11 <- C109$AddChild("T11")
+        T12 <- C109$AddChild("T12")
+        T13 <- C109$AddChild("T13")
+        T14 <- C109$AddChild("T14")
+        T15 <- C109$AddChild("T15")
+        T16 <- C109$AddChild("T16")
+        T19 <- C109$AddChild("T19")
+   C118 <- tree$AddChild("C118")
+      T20 <- C118$AddChild("T20")
+      T21 <- C118$AddChild("T21")
+      T22 <- C118$AddChild("T22")
+      T23 <- C118$AddChild("T23")
+     C123 <- C118$AddChild("C123")
+        T24 <- C123$AddChild("T24")
+        T25 <- C123$AddChild("T25")
+      T27 <- C118$AddChild("T27") 
+      T28 <- C118$AddChild("T28")
+      T29 <- C118$AddChild("T29")
+   C129 <- tree$AddChild("C129")
+      T40 <- C118$AddChild("T40")
+      T41 <- C118$AddChild("T41")
+   C130 <- tree$AddChild("C130")
+      T50 <- C118$AddChild("T50")
+      T51 <- C118$AddChild("T51")
+      T53 <- C118$AddChild("T53")
+      T99 <- C118$AddChild("T99")
+
+SetGraphStyle(tree, rankdir = "TB")
+SetEdgeStyle(tree, arrowhead = "vee", color = "grey35", penwidth = 2)
+SetNodeStyle(tree, style = "filled,rounded", shape = "box", fillcolor = "LightBlue", fontname = "helvetica", tooltip = GetDefaultTooltip)
+plot(tree)
+
+```
+
+<font size=3> 
+We could see from the structure of data, total taxes is consist of 5 parts: property taxes, total sales&gross receipts taxes, total license taxes, total income taxes, and total other taxes. Each of them are consist of some other values in the table. Thus it is convenient for us to see these five features to get a brief understanding of tax revenue in a state.
+
+</font>
+
+<font size=3>     
+To clearly get information of each part, we show the name of each classification:   
+
+</font> 
+
+```{r item_code}
+datatable(code)
+```
+ 
+***********
+
+# 4. Main Analysis (Exploratory Data Analysis)  
+
+## a. First, we compare patterns in different states:  
+
+<font size=3>   
+
+i. First, we introduce the graph consist of 5 majority tax revenues in each state. We want to draw some general information by comparison.
+
+</font> 
+
+```{r geofacet_T01_C107_C118_C129_C130 ,fig.width=24, fig.height=20 }
+dat2016_tidy$value = as.integer(gsub(',', '', dat2016_tidy$value))
+dat2016_tidy <- as.data.table(dat2016_tidy)
+dat2016_tidy %>% filter(Name != "US" & item_code %in% c("T01","C107","C118","C129","C130"))  %>%
+ggplot(aes(item_code, value, fill = item_code)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  facet_geo(~ Name, scales="free") + 
+  ggtitle("US Tax T01, C107, C118, C129, C130 of 2016")
+```
+
+<font size=3>   
+
+From this graph, we could see several patterns in different states.
+VT depends on T01(Property Tax) more than other states.
+More than half states tax revenue mainly come from C129 and C107, that is Tot Sales & Gr Rec Tax and total income taxes.
+ND, AK, WY rely on C130(Total Other Taxes) much more than other states
+More than 90% tax revenue in FL and TX\’ come from C107(Total Other Taxes), and other tax revenues only occupy 10% .
+
+</font> 
+
+<font size=3>   
+
+ii. As C107(Tot Sales & Gr Rec Tax) = C109(Total Select Sales Tax) + T09(Total Gen Sales Tax), we divided C107 into two parts and compare them based on states:
+
+</font> 
+
+```{r geofacet_T09_C109 , fig.width=24, fig.height=20}
+dat2016_tidy %>% filter(Name != "US" & item_code %in% c("T09","C109"))  %>%
+ggplot(aes(item_code, value, fill = item_code)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  facet_geo(~ Name) + 
+  ggtitle("US Tax T09, C109 of 2016")
+```
+
+<font size=3>   
+We can see from the picture that CA, TX, FL\'s sales tax revenue is much more than other states; NY, WA, IL, OH follows.   
+
+From the picture above, we know that for majority states, T09(total gen sales tax) is more than C109(total select sales tax).    
+
+Meanwhile, we find that NH, OR, DE and AK do not have the T09 data, which means it may contribute all sales taxes to select sales tax, which is not accurate.
+</font>   
+
+<font size=3>  
+
+iii. Then, we analyze the T11(Amusement Tax) and T14(Parimutuels Tax), we want to know if LA is the biggest player.
+
+
+</font>
+```{r geofacet_T11_T14 , fig.width=24, fig.height=20}
+dat2016_tidy %>% filter(Name != "US" & item_code %in% c("T11","T14"))  %>%
+ggplot(aes(item_code, value, fill = item_code)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  facet_geo(~ Name) + 
+  ggtitle("US Tax T11, T14 of 2016")
+```
+
+<font size=3>  
+
+We find that in fact LA's tax revenue in Parimutuels is not the largest. Instead, PA, NV, IL are the top 3 players, LA ranks No.4.  
+At the same time, Amusement tax revenues is nothing compared with Parimutuels, NY and PA are the most players.
+
+
+</font>
+
+
+iv. Then, we want to get some information from income taxes, which is consist of T40(Individual Income Tax) and T41(Corp Net Income Tax)
+
+```{r geofacet_T40_T41 , fig.width=24, fig.height=20}
+dat2016_tidy %>% filter(Name != "US" & item_code %in% c("T40","T41"))  %>%
+ggplot(aes(item_code, value, fill = item_code)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  facet_geo(~ Name) + 
+  ggtitle("US Tax T40, T41 of 2016")
+```
+
+From the graph we see that CA and NY have the highest revenue for individual income tax, which means people in these two states have a higher quality life.
+
+v. Finally, we see an interesting feature, T50(Death and Gift Tax), which also means where are richest people tend to live and give their heritage to descendant.
+
+```{r geofacet_T50 , fig.width=24, fig.height=20}
+dat2016_tidy %>% filter(Name != "US" & item_code %in% c("T50"))  %>%
+ggplot(aes(item_code, value, fill = item_code)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  facet_geo(~ Name)
+  ggtitle("US Tax T50 of 2016")
+```
+From the graph we know in NY, NJ, PA have more tax revenue in Death and Gift Tax. But we need to pay attention to the missing data of this item, many state do not have this item, so the result may be biased.
+
+
+## b. Second, we compare each tax revenues:   
+<font size=3>  
+
+i. As we know the total tax revenue of each state:  
+
+```{r choropleth maps tax, fig.width=8.5, fig.height=6}
+dat2016 <- dat %>% filter(dat$Year == 2016 & Name != "US")
+dat2016 <- as.data.table(dat2016)
+dat2016 <- cbind(dat2016[,Year:`FY Ending Date`],as.data.table(lapply(dat2016[,C105:T99], To_int)))
+
+dat2016$hover <- with(dat2016, paste(Name, '<br>', "Property Taxes", T01, '<br>', "Total Sales & Gross Receipts Taxes", C107, '<br>', "Total License Taxes", C118, '<br>', "Total Income Taxes", C129, '<br>', "Total Other Taxes", C130))
+l <- list(color = toRGB("white"), width = 2)
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('lightblue')
+)
+# total
+plot_geo(dat2016, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C105, text = ~hover, locations = ~Name,
+    color = ~C105, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Taxes(by k $)") %>%
+  layout(
+    title = '2016 US State Government Tax Collection',
+    geo = g
+  )
+# sales
+plot_geo(dat2016, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C107, locations = ~Name,
+    color = ~C107, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Sales & Gross Receipts Taxes(by k $)") %>%
+    layout(
+    title = '2016 US State Government Sales & Gross Receipts Tax Collection',
+    geo = g
+  )
+# income
+plot_geo(dat2016, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C129, locations = ~Name,
+    color = ~C129, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Income Taxes(by k $)") %>%
+    layout(
+    title = '2016 US State Government Income Tax Collection',
+    geo = g
+  )
+```
+
+<font size=3>  
+But we also want to know the tax paid by each person, which could eliminate the effect of population.   
+To address this problem, we will introduce a populate estimation in section 6, the interactive part, which is estimated by the exact number in 2010, though may not represent the real number of population in each state. As the fast growing states tend to attract more people than previous, like CA, the average tax calculated may be higher than the real number.
+
+</font>   
+
+## c. Third, let's look at NYC tax revenue:   
+
+```{r nyc_revenue_1980_2013}
+tax_revenue <- read.csv("nyc_tax_revenue_1980_2013.csv", header=TRUE)
+tax_revenue_tidy <- tax_revenue %>%
+  gather(year, value, FY.2013:FY.1980)
+tax_revenue_tidy$year <- substr(tax_revenue_tidy$year,nchar(tax_revenue_tidy$year)-3,nchar(tax_revenue_tidy$year))
+tax_revenue_tidy$year <- paste(tax_revenue_tidy$year,"08","31",sep="")
+tax_revenue_tidy$year <- ymd(tax_revenue_tidy$year)
+
+tax_revenue_tidy %>%
+  ggplot(aes(x = year, y = value, color = Tax.Revenue)) +
+    geom_line(size = 1) +
+    labs(title = "NYC Tax Collection") +
+    theme_tq() + 
+    scale_color_tq()
+```
+
+Q: Do tax revenue drops or increases have any meaning? What could be the reasons for that drops or increases?
+From this graph, we can see that the total tax revenue dropped since 2008 and increased back around 2010. It is consistent with the recession happened around 2008 and the recovery after 2010.
+Also, there is another drop around early 2000, which corresponds to the recession at that time.
+
+```{r nyc_revenue_1980_2013_bar, fig.width=9, fig.height=8}
+ggplot(tax_revenue_tidy, aes(x = Tax.Revenue, y = value, fill = year)) + 
+  geom_bar(stat = "identity")
+
+barplot(as.matrix(tax_revenue[2:35]), legend.text =c("Property", "Personal Income", "General Sales", "General Corporation", "Financial Corporation", "Unincorporated Business Income", "Mortgage Recording", "Commercial Rent", "Conveyance of Real Property", "Other Taxes", "Total Taxes"))
+```
+
+Q: Any consistent pattern from 1980 to 2013 for each categories of the tax revenue at NYC?
+Yes, we can see from this graph that all the tax revenue from each categories increases from 1980 to 2013 as expected.
+First reason is inflation. Second reason is that the economics has been growing and America is able to produce more, spend more, and hence increasing in tax revenue.
+
+```{r nyc_revenue_2016_2018, fig.width=10, fig.height=10}
+rev_bud <- read.csv("revenue_budget_16_18.csv", header=TRUE)
+rev_bud$Revenue.Category.Name <- sub("^$", "Unknown Source", rev_bud$Revenue.Category.Name)
+df_tmp <- subset(rev_bud, select=c("Revenue.Category.Name", "Year.1.Revenue.Amount")) %>% group_by(Revenue.Category.Name) %>% summarise(Year.1.Revenue.Amount = sum(Year.1.Revenue.Amount))
+ggplot(df_tmp, aes(x = reorder(Revenue.Category.Name, -Year.1.Revenue.Amount), y = Year.1.Revenue.Amount, fill = Revenue.Category.Name)) + 
+  geom_bar(stat = "identity") + xlab("Revenue Source") + ylab("Revenue Amount") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+Q: Is tax collection one of the primary source of NYC government's income?
+Yes, it is. We can see from above graph that more than half of the NYC revenues for one year are from Taxes. One of the primary source of government's income are from collecting taxes. Therefore, it is really hard for the government to reducing taxes. For further analysis, we can pull out some data about how many taxes are collected from each classes and we can see which class contributes the most in tax revenues.
+
+```{r nyc_tax_revenue, fig.width=15 , fig.height=40}
+library(tidyr)
+library(tidyverse)
+df1 <- tax_revenue %>%
+  gather(year, value, FY.2013:FY.1980)
+ggplot(df1, aes(x=reorder(Tax.Revenue, -value), y=value, fill=Tax.Revenue)) +
+  geom_bar(stat="identity") + xlab("NYC Tax Revenue") + ylab("Year") +
+  theme(axis.text.y = element_blank()) +
+  facet_wrap(~year) + coord_flip()
+```
+
+```{r nyc_non_tax_revenue,fig.width=15 ,fig.height=40}
+non_tax_revenue <- read.csv("nyc_non_tax_revenue_1980_2013.csv", header=TRUE)
+df2 <- non_tax_revenue %>%
+  gather(year, value, FY.2013:FY.1980)
+ggplot(df2, aes(x=reorder(Non.Tax.Revenue, -value), y=value, fill=Non.Tax.Revenue)) +
+  geom_bar(stat="identity") + xlab("NYC Non-Tax Revenue") + ylab("Year") +
+  theme(axis.text.y = element_blank()) +
+  facet_wrap(~year, ncol=3) + coord_flip()
+```
+Q: Which category contributes the highest amount of tax revenues and non-tax revenues from 1980 to 2013?
+We pulled dataset of NYC Tax Revenues and NYC Non-Tax Revenues from 1980 to 2013. For Tax Revenues, property tax contributes the highest amount from 1980 to 2013.
+For Non-Tax Revenues, water and sewer contributes the highest amount from 1980 to 2013. The pattern are pretty consistent from 1980 to 2013 for both Tax Revenues and Non-Tax Revenues.
+
+***********
+# 5. Executive Summary (Presentation-style)  
+
+## a. First, we introduce the bird view of tax revenue in America:  
+
+From the perspective of geography:
+
+<font size=3> 
+From this graph, we could see several patterns in different states.
+VT depends on T01(Property Tax) more than other states.
+More than half states tax revenue mainly come from C129 and C107, that is Tot Sales & Gr Rec Tax and total income taxes.
+ND, AK, WY rely on C130(Total Other Taxes) much more than other states
+More than 90% tax revenue in FL and TX\’ come from C107(Total Other Taxes), and other tax revenues only occupy 10% .
+</font> 
+
+```{r 51, fig.width=8.5, fig.height=6}
+plot_geo(dat2016, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C105, text = ~hover, locations = ~Name,
+    color = ~C105, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Taxes(by k $)") %>%
+  layout(
+    title = '2016 US State Government Tax Collection',
+    geo = g
+  )
+```
+
+## b. Second, we want to analyze an example about the tax revenue in one state, NY:   
+
+```{r 52, fig.width=8.5, fig.height=6}
+tax_revenue_tidy %>%
+   plot_ly(x = ~year, y = ~value, color= ~Tax.Revenue , mode = 'lines')
+```
+
+Q: Any trends for tax revenue from 1980 to 2013?
+From this graph, we can see that the total tax revenue dropped since 2008 and increased back around 2010. It is consistent with the recession happened around 2008 and the recovery after 2010.
+Also, there is another drop around early 2000, which corresponds to the recession at that time.
+
+## c. Third, we want to analyze patterns in different states: 
+
+```{r 53, fig.width=24, fig.height=20}
+dat2016_tidy %>% filter(Name != "US" & item_code %in% c("T01","C107","C118","C129","C130"))  %>%
+ggplot(aes(item_code, value, fill = item_code)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  facet_geo(~ Name, scales="free") + 
+  ggtitle("US Tax T01, C107, C118, C129, C130 of 2016")
+```
+
+## d. Finally, we want to give some insights about the tax revenue in America:
+
+VT depends on T01(Property Tax) more than other states.
+More than half states tax revenue mainly come from C129 and C107, that is Tot Sales & Gr Rec Tax and total income taxes. VT depends on T01(Property Tax) more than other states.
+More than half states tax revenue mainly come from C129 and C107, that is Tot Sales & Gr Rec Tax and total income taxes.
+VT depends on T01(Property Tax) more than other states.
+More than half states tax revenue mainly come from C129 and C107, that is Tot Sales & Gr Rec Tax and total income taxes.
+
+VT depends on T01(Property Tax) more than other states.
+More than half states tax revenue mainly come from C129 and C107, that is Tot Sales & Gr Rec Tax and total income taxes.
+
+# 6. Interactive Component 
+
+<font size=3> 
+
+To get a overall understanding of the tax revenues in U.S., we use two interacitve components to help you get insights.  
+
+i. A geographical tax revenue picture in 50 states. 
+ii. A time serious tax revenue picture from 1951 to 2016.
+
+</font>
+
+## a. An interactive Network for tax codes:
+
+```{r, fig.width=8.5, fig.height=6}
+tree <- Node$new("C105: Total Taxes")
+    T01 <- tree$AddChild("T01: Property Taxes")
+   C107 <- tree$AddChild("C107: Total Sales & Gross Receipts Taxes")
+      T09 <- C107$AddChild("T09: General Sales and Gross Receipts Taxes")
+     C109 <- C107$AddChild("C109: Total Selective Sales Tax")
+        T10 <- C109$AddChild("T10: Alcoholic Beverages Sales Tax")
+        T11 <- C109$AddChild("T11: Amusements Sales Tax")
+        T12 <- C109$AddChild("T12: Insurance Premiums Sales Tax")
+        T13 <- C109$AddChild("T13: Motor Fuels Sales Tax")
+        T14 <- C109$AddChild("T14: Pari-mutuels Sales Tax")
+        T15 <- C109$AddChild("T15: Public Utilities Sales Tax")
+        T16 <- C109$AddChild("T16: Tobacco Products Sales Tax")
+        T19 <- C109$AddChild("T19: Other Selective Sales and Gross Receipts Taxes")
+   C118 <- tree$AddChild("C118: Total License Taxes")
+      T20 <- C118$AddChild("T20: Alcoholic Beverages License")
+      T21 <- C118$AddChild("T21: Amusements License")
+      T22 <- C118$AddChild("T22: Corporations in General License")
+      T23 <- C118$AddChild("T23: Hunting and Fishing License")
+     C123 <- C118$AddChild("C123: Motor Vehicles & Operators License")
+        T24 <- C123$AddChild("T24: Motor Vehicles License")
+        T25 <- C123$AddChild("T25: Motor Vehicle Operators License")
+      T27 <- C118$AddChild("T27: Public Utilities License") 
+      T28 <- C118$AddChild("T28: Occupation and Businesses License, NEC")
+      T29 <- C118$AddChild("T29: Other License Taxes")
+   C129 <- tree$AddChild("C129: Total Income Taxes")
+      T40 <- C118$AddChild("T40: Individual Income Taxes")
+      T41 <- C118$AddChild("T41: Corporation Net Income Taxes")
+   C130 <- tree$AddChild("C130: Total Other Taxes")
+      T50 <- C118$AddChild("T50: Death and Gift Taxes")
+      T51 <- C118$AddChild("T51: Documentary and Stock Transfer Taxes")
+      T53 <- C118$AddChild("T53: Severance Taxes")
+      T99 <- C118$AddChild("T99: Taxes, NEC")
+Dtree <- ToListExplicit(tree, unname = TRUE)
+diagonalNetwork(List = Dtree, fontSize = 10, opacity = 0.9)
+```
+
+## b. A geographical tax revenue picture in 50 states:  
+
+<font size=3> 
+First, we introduced population dataset.
+</font> 
+
+```{r choropleth maps population, fig.width=8.5, fig.height=6}
+population <- fread(input = "sub-est2016_all.csv")
+population <- population[,STNAME,POPESTIMATE2016]
+population <- population[,.(population=sum(POPESTIMATE2016)),by=STNAME]
+population$STNAME <- state.abb[match(population$STNAME,state.name)]
+colnames(population) = c("Name", "population")
+population <- as.data.table(population)
+
+plot_geo(population, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~population, locations = ~Name,
+    color = ~population, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Population") %>%
+    layout(
+    title = 'US Estimated Population US for 2016',
+    geo = g
+  )
+```
+
+<font size=3>
+
+As we have seen in the plots before, CA always has taxes collection more than many of the other states. looking at this plot, we could find that CA also has the largest population, so our assumption that introducing population into our research into the tax collection problem is reasonable.
+
+</font> 
+
+<font size=3>   
+
+Then, we give a comparation of tax revenues based on the geographical locations in 2016, which tells us states contribute most to the tax revenue.
+
+For further information about the state: we could put mouse over the state and it shows the most important tax revenue data: C107(Total Sales & Gr Rec Tax), C118(Total License Taxes), C129(Total Income Taxes) and C130(Total Other Taxes) in the state. In this way, we could get more detailed components of the tax revenue in the state.
+
+</font> 
+
+```{r choropleth maps tax/population, fig.width=8.5, fig.height=6}
+dat2016_p <- merge(dat2016,population, keyby="Name")
+dat2016_p <- cbind(dat2016_p[,Name:`FY Ending Date`],(1000 * dat2016_p[,C105:T99])/dat2016_p$population)
+
+# total
+plot_geo(dat2016_p, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C105, locations = ~Name,
+    color = ~C105, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Taxes(per person by $)") %>%
+  layout(
+    title = '2016 US State Government Tax Collection',
+    geo = g
+  )
+# sales
+plot_geo(dat2016_p, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C107, locations = ~Name,
+    color = ~C107, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Sales & Gross Receipts Taxes(per person by $)") %>%
+    layout(
+    title = '2016 US State Government Sales & Gross Receipts Tax Collection',
+    geo = g
+  )
+# income
+plot_geo(dat2016_p, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~C129, locations = ~Name,
+    color = ~C129, colors = 'Oranges'
+  ) %>%
+  colorbar(title = "Total Income Taxes(per person by $)") %>%
+    layout(
+    title = '2016 US State Government Income Tax Collection',
+    geo = g
+  )
+```
+
+## c. A time serious tax revenue picture from 1980 to 2014 in NYC:
+
+```{r interactive time series, fig.width=8.5, fig.height=6}
+tax_revenue_tidy %>%
+   plot_ly(x = ~year, y = ~value, color= ~Tax.Revenue , mode = 'lines')
+```
+
+<font size=3> 
+
+You can choose lines of revenue kinds as you want. Moving the mouse on the line will present you the date and tax collection result.
+
+</font>
+
+***********
+# 7. Conclusion
+ 
+## a. Limitations:  
+
+<font size=3> 
+i. As the data still has some missing values, which may impact the accuracy of results. 
+
+ii. The data consists of information from 1951 to 2016. Althought we could get enought data, the economy changes much in such a long time and we have not explored all details in this data.   
+
+iii. As the data only contains total tax revenue, we have not taken other factors in to consideration, it may only represents the total revenue and fail to represent.    
+
+vi. As each state has different tax policy, and the rate of tax is also depends on each state, this will impact the comparision in a way.
+
+v. Some states do not need to pay tax in certain classification, we define them as missing data, but in fact it is not missing.
+
+
+</font>
+
+## b. Future directions:   
+
+<font size=3>  
+
+i. We want to get more information about the differene of each state\'s tax policy, and we could introduce some methods to eliminate the impact of it and compare in a more fair way.
+
+ii. We want to find a special period, such as depression era in 1998 and 2008, and find how the taxes changes.  
+
+iii. We want to explore more details in other years besides 2016, and find how the patterns change overtime.  
+
+iv. We could chose more models to draw the graph, which will enrich the report.
+
+v. We want to collect more related data in specific area to analyze questions more deeply.     
+
+</font> 
+
+
+
+
+
+
+
+
+
+

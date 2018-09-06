@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Q1 Part C</title>
+    <script src="https://d3js.org/d3.v4.min.js">  </script>
+
+  </head>
+  <body>
+    <script type="text/javascript">
+
+      var w = 500;
+      var h = 300;
+      var margin = {top: 25, right: 25, bottom: 25, left: 25};
+      var innerHeight = h - margin.top - margin.bottom;
+      var innerWidth = w - margin.left - margin.right;
+
+      var dataset = [{letter: "A", amount1: 34, amount2: 78},
+                     {letter: "B", amount1: 45, amount2: 91},
+                     {letter: "C", amount1: 14, amount2: 38}];
+      
+      
+      
+      var svg = d3.select("body")
+		  .append("svg")
+		  .attr("width", w)
+		  .attr("height", h);
+		  
+      svg.append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", w)
+          .attr("height", h)
+          .attr("fill", "white");
+		          
+	  var dotdata = dataset;
+		  
+	  var xScale = d3.scaleLinear()
+          .domain([0, d3.max(dotdata, function(d){
+          return (d.amount1 < d.amount2) ? d.amount2 : d.amount1 })])
+          .range([0, innerWidth]);
+          
+      var yScale = d3.scaleBand()
+          .domain(dotdata.map(function(d) { return d.letter }))
+          .rangeRound([innerHeight, 0], 0.2)
+          .paddingInner(.1);
+      var xAxis = d3.axisBottom()                   
+          .scale(xScale);
+          
+      var yAxis = d3.axisLeft()
+          .scale(yScale);
+         
+          
+// add fainted lines             
+      var lines = svg.append("g")
+          .attr("transform", `translate (${margin.left}, ${margin.top})`) 
+          .selectAll("line")
+          .data(dotdata);         
+  
+      lines.enter().append("line")
+          .style("stroke", "lightgrey")
+          .style("stroke-width", "1.5px")
+          .attr("x1", 0)
+          .attr("y1", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+          .attr("x2", innerWidth)
+          .attr("y2", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 });     
+          
+// add dots          
+      var dots = svg.append("g")
+          .attr("id", "plot")   
+          .attr("transform", `translate (${margin.left}, ${margin.top})`)                    
+          .selectAll("dot")
+          .data(dotdata);
+          
+      dots.enter().append("circle")
+          .attr("cx", function(d) { return xScale(d.amount1) })
+          .attr("cy", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+          .attr("r", 3)
+          .attr("fill", "black");
+          
+      dots.enter().append("circle")
+          .attr("cx", function(d) { return xScale(d.amount2) })
+          .attr("cy", function(d) { return yScale(d.letter) + yScale.bandwidth()/2 })
+          .attr("r", 3)
+          .attr("fill", "blue");
+          
+      svg.append("g")    
+         .attr("class", "yAxis")
+         .attr("transform", `translate (${margin.left}, ${h - margin.bottom})`)                            
+         .call(xAxis);
+         
+      svg.append("g")
+         .attr("class", "yAxis")
+         .attr("transform", `translate (${margin.left}, ${margin.top})`) 
+         .call(yAxis);
+  
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </script>
+  </body>
+</html>

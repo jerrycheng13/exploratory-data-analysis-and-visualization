@@ -1,0 +1,294 @@
+---
+title: "Homework 2"
+author: "Jinhan Cheng, jc4834@columbia.edu"
+date: 2018/02/12
+output:
+  prettydoc::html_pretty:
+    theme: tactile
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE, 
+                      cache = TRUE)
+#library
+library(tidyverse)
+library(ggplot2)
+library(data.table)
+library(prettydoc)
+#data
+library(DAAG)
+```
+
+### Chapter 4
+
+#### 1. Slot Machines (Chapter 4 exercises, #3, p. 72)
+
+[5 points]
+
+Do not use *grid.arrange()* for this exercise. Rather, use *gather()* to tidy the data and then facet on window number.  To make the comparison, use relative frequency bar charts (the heights of the bars in each facet sum to one).  Describe how the distributions differ.
+
+#### Answer to 4.1
+
+* The distributions are shown as below, and all of them have descending tendenscy. 
+* The difference between the distributions lies in the peaks. For window2 there is a minor peak on the right of the first peak. And the peaks of window2 and window3 are relatively higher than window1
+
+```{r 4_1, echo=TRUE}
+dat4_1 <- vlt
+dat4_1_t <- dat4_1 %>% gather(window,value,window1:window3)
+ggplot(dat4_1_t, aes(value)) +
+geom_histogram(aes(y = ..density..), binwidth = 1) + xlab("") + ylab("frequency") + facet_wrap(~window)
+```
+
+#### 2. Detailed Mortality data ("Death2015.txt")
+
+[21 points]
+
+This data comes from the "Detailed Mortality" database available on https://wonder.cdc.gov/
+
+Code for all preprocessing must be shown. (That is, don't open in the file in Excel or similar, change things around, save it, and then import to R. Why? Because your steps are not reproducible.)
+
+(a) For `Place of Death`, `Ten-Year Age Groups`, and `ICD Chapter Code` variables, do the following:
+
+Identify the type of variable (nominal, ordinal, or discrete) and draw a horizontal bar chart using best practices for order of categories.
+
+#### Answer to 4.2.(a)
+
+* **Place.of.Death**'s type is **nominal**; **Ten.Year.Age.Groups**'s type is **ordinal**; **ICD.Chapter.Code**'s type is **nominal**
+* There are missing value in the dataset and are labelled as "", we don't remove them at this stage
+
+```{r 4_2a, echo=TRUE}
+dat4_2 <- read.delim("Death2015.txt")
+str(dat4_2$Place.of.Death)
+str(dat4_2$Ten.Year.Age.Groups)
+str(dat4_2$ICD.Chapter.Code)
+summary(dat4_2$Place.of.Death)
+summary(dat4_2$Ten.Year.Age.Groups)
+summary(dat4_2$ICD.Chapter.Code)
+#Place.of.Death
+mytheme <- theme_grey(18)
+dat4_2a_1 <- dat4_2 %>% group_by(Place.of.Death) %>% summarize(count = n())
+ggplot(dat4_2a_1, aes(reorder(Place.of.Death, count), count)) + geom_col() + coord_flip() + xlab("") + mytheme
+#Ten.Year.Age.Groups
+levels(dat4_2$Ten.Year.Age.Groups) <- c("","< 1 year","1-4 years","5-14 years","15-24 years","25-34 years","35-44 years","45-54 years","55-64 years","65-74 years","75-84 years","85+ years","Not Stated")
+ggplot(dat4_2, aes(Ten.Year.Age.Groups)) + geom_bar() + coord_flip() + mytheme
+#ICD.Chapter.Code
+dat4_2a_2 <- dat4_2 %>% group_by(ICD.Chapter.Code) %>% summarize(count = n())
+ggplot(dat4_2a_2, aes(reorder(ICD.Chapter.Code, count), count)) + geom_col() + coord_flip() + xlab("") + mytheme
+```
+
+(b) Create horizontal bar charts for the ICD sub-chapter codes, one plot per ICD chapter code, by faceting on chapter code, *not* by using *grid.arrange()*.  Use `scales = "free"` with `facet_wrap()`. It should look like this (with data, of course!). Describe notable features.
+
+#### Answer to 4.2.(b)
+
+* Some of the sub-chapter codes within their ICD chapter code have obvious peaks and valleys H60-H93 for instance, and some of them seems uniformly distributed D50-D89 for instance or normally distributed I00-I99 for instance
+
+```{r 4_2b, fig.width = 15, fig.height = 40, echo=TRUE}
+dat4_2 %>%
+  filter(ICD.Chapter.Code != "" ) %>%
+  ggplot(aes(ICD.Sub.Chapter.Code)) + geom_bar() + facet_wrap(~ICD.Chapter.Code,ncol=3,scales="free") + coord_flip() + mytheme + theme(legend.position = "bottom")
+```
+
+(c) Change the `scales` parameter to `scales = "free_y"`. What changed?  What information does this set of graphs provide that wasn't available in part (b)?
+
+#### Answer to 4.2.(c)
+
+* After changing the **scales** parameter to **scales="free_y"**, the **scale** of y axis within each sub-graph becomes the same, so are the units. What is more obvious is that some of the heights of the bars changed compared with 4.2.(b)
+* The information that wasn't avaiable in part(b) is that we could compare the counts of ICD.Sub.Chapter.Code by directly comparing the height of the bar
+
+```{r 4_2c, fig.width = 15,fig.height = 40, echo=TRUE}
+dat4_2 %>%
+  filter(ICD.Chapter.Code != "" ) %>%
+  ggplot(aes(ICD.Sub.Chapter.Code)) + geom_bar() + facet_wrap(~ICD.Chapter.Code,ncol=3,scales="free_y") + coord_flip() + mytheme + theme(legend.position = "bottom")
+```
+
+(d) Redraw the panels as *relative frequency* bar charts rather than *count* bar charts. (The lengths of the bars *in each panel separately* must sum to 1.) What new information do you gain?
+
+#### Answer to 4.2.(d)
+
+* Regardless of the values, the shape of the bars are the same as they are in 4.2.(b)
+* Apart from the shape, we could read the percentage directly from the graph
+
+
+```{r 4_2d, fig.width = 15,fig.height = 40, echo=TRUE}
+dat4_2 %>%
+  filter(ICD.Chapter.Code != "" ) %>%
+  ggplot() + geom_bar(aes(x=ICD.Sub.Chapter.Code,y=..prop..,group=ICD.Chapter.Code)) + facet_wrap(~ICD.Chapter.Code,ncol=3,scales="free") + coord_flip() + mytheme + theme(legend.position = "bottom") + ylab("frequency")
+```
+
+(e) Choose one of the small panels and redraw it as a single graph, using names rather than codes. (That is, use `ICD Chapter` and `ICD Sub-Chapter` instead of the code versions.)  What type of data is this? Note any interesting features.
+
+#### Answer to 4.2.(e)
+
+* The type of data are factors
+* The interesting feature of this graph is the shape changed compared with what we ploted with **code**, because they are ordered as alphabetical order
+
+```{r 4_2e, fig.width = 10,fig.height = 5, echo=TRUE}
+#plot
+dat4_2 %>%
+  filter(ICD.Chapter.Code == levels(ICD.Chapter.Code)[2] ) %>%
+  ggplot() + geom_bar(aes(x=ICD.Sub.Chapter,y=..prop..,group=ICD.Chapter)) + facet_wrap(~ICD.Chapter,ncol=3,scales="free") + coord_flip() + mytheme + theme(legend.position = "bottom") + ylab("frequency")
+#type of data
+str(dat4_2$ICD.Chapter)
+str(dat4_2$ICD.Sub.Chapter)
+```
+
+#### 3. Detailed Mortality, questions about the data
+
+[6 points]
+
+Cite your sources with links. 
+
+(a) Who is included in the death counts?
+
+#### Answer to 4.3.(a)
+
+* **U.S. residents** are included in the death counts
+* https://wonder.cdc.gov/ucd-icd10.html
+
+(b) When was this query processed?  (Hint: it's in the file itself; don't provide the file time stamp.)
+
+#### Answer to 4.3.(b)
+
+* This query was processed on **Feb 5, 2018 5:08:43 PM**
+* It was found at the end of the txt file
+
+(c) What does "ICD" stand for? Which version is used for this particular dataset? Name five other countries that use the ICD for official mortality data.
+
+#### Answer to 4.3.(c)
+
+* **ICD** stands for **International Classification of Diseases**
+* **4-digit ICD-10** is used to code for this particular dataset
+* https://www.cdc.gov/nchs/icd/icd10cm.htm
+* **Brazil**, **Canada**, **China**, **Czech Republic**, **France** use the ICD for official mortality data
+* https://en.wikipedia.org/wiki/ICD-10
+
+(d) Which U.S. organizations collects mortality data? Where is the headquarters located?
+
+#### Answer to 4.3.(d)
+
+* Mortality data from the **National Vital Statistics System (NVSS)** are a fundamental source of demographic, geographic, and cause-of-death information. And **National Center for Health Statistics(NCHS)** collects mortality data
+* It is headquartered at University Town Center in Hyattsville, Maryland
+* https://www.cdc.gov/nchs/nvss/deaths.htm
+* https://en.wikipedia.org/wiki/National_Center_for_Health_Statistics
+
+(e) In brief, how is the data collected?  What is the estimated accuracy rate, according to the dataset documentation?
+
+#### Answer to 4.3.(e)
+
+* As for **Mortality Data**: The Underlying Cause of Death data are produced by the National Center for Health Statistics (NCHS) at the Centers for Disease Control and Prevention (CDC). Mortality information is collected by state registries and provided to the National Vital Statistics System. Underlying cause of death and demographic descriptors are indicated on the death certificates
+* As for **Population Denominator Data**: The population estimates are bridged-race estimates based on Bureau of the Census estimates of total U.S., State, and county resident populations
+* The authors estimate that the misclassification and under-coverage result in overstated death rates for the white and black populations (1% and 5%, respectively) and understated death rates for other population groups (American Indians, 21%; Asian or Pacific Islanders, 11%; and Hispanics, 2%); The accuracy then can be calculated as **99%**, **95%**, **79%**, **89%**, **98%** for white, black, American Indians, Asian or Pacific Islanders and Hispanics population respectively
+* https://wonder.cdc.gov/wonder/help/ucd.html
+
+### Chapter 5
+
+#### 1. Movie ratings
+
+[12 points]
+
+Explore *length* vs. *year* in the **ggplot2movies** dataset, after removing outliers. (Choose a reasonable cutoff).
+
+Draw four scatterplots of *length* vs. *year* from the with the following variations:
+
+(a) Points with alpha blending
+
+#### Answer to 5.1.(a)
+
+* It seems that the movies with length over 200 are outliers, and we remove those movies
+* It seems that the year before 1920 are outliers, and we remove those years
+
+```{r 5_1a, echo=TRUE}
+library(ggplot2movies)
+dat5_1 <- movies
+binnedmovies <- dat5_1 %>% 
+  mutate(mybin = ntile(length, 10)) %>% 
+  dplyr::select(year, length, mybin)
+
+ggplot(binnedmovies, aes(year, length)) + 
+  geom_point(alpha = .1) +
+    facet_wrap(~mybin, scales = "free")
+
+binnedmovies %>% filter(mybin==10) %>%
+  ggplot(aes(year, length)) + geom_point(alpha = .1)
+
+dat5_1_ro <- dat5_1 %>% filter(length <= 200 & year >=1920)
+ggplot(dat5_1_ro, aes(year, length)) + geom_point(alpha = .1) + theme_grey(18)
+```
+
+(b) Points with alpha blending + density estimate contour lines
+
+#### Answer to 5.1.(b)
+
+```{r 5_1b, echo=TRUE}
+ggplot(dat5_1_ro, aes(year, length)) + geom_point(alpha = .1) + geom_density_2d() + theme_grey(18)
+```
+
+(c) Hexagonal heatmap of bin counts
+
+#### Answer to 5.1.(c)
+
+```{r 5_1c, echo=TRUE}
+library(viridis)
+ggplot(dat5_1_ro, aes(year, length)) + scale_fill_viridis() + theme_classic(18) + geom_hex(binwidth = c(3, 6))
+```
+
+(d) Square heatmap of bin counts 
+
+#### Answer to 5.1.(d)
+
+```{r 5_1d, echo=TRUE}
+ggplot(dat5_1_ro, aes(year, length)) + scale_fill_viridis() + theme_classic(18) + geom_bin2d(binwidth = c(3, 6))
+```
+
+For all, adjust parameters to the levels that provide the best views of the data.
+
+(e) Describe noteworthy features of the data, using the movie ratings example on page 82 (last page of Section 5.3) as a guide. 
+
+#### Answer to 5.1.(e)
+
+* As year goes by, the length of movies has an overall tendency of gentle increasing
+* There are 3 obvious clusters within the plot as we could see from both the scatter plot and heatmap, that means most movies tend to have their length lie at around 85min or 10min, and are most concentrated at around year 2000
+* To interpret the result, movies of medium length micro films are getting more popular
+
+(f) How do (a)-(d) compare? Are there features that you can see in some but not all of the graphs?
+
+#### Answer to 5.1.(f)
+
+* Scatter plot describe most of the details of the visible relationship between year and length, however, when the scatters are too concentrated, it's hard to get a statistical density to help us analyze. When we use density estimate contour lines and heatmap, though using it solely will discard some details, but they could give us a rough description of the statistical result
+
+#### 2. Leaves (Chapter 5 exercises, #7, p. 96)
+
+[6 points]
+
+#### Answer to 5.2.(a)
+
+* There are obvious linear relationsip between the three variables
+* The logarithms of the three variables are more useful, because it lower the variance which improve the results of regression
+
+```{r 5_2a, echo=TRUE}
+library(car)
+dat5_2 <- leafshape
+splomvar1 <- dat5_2 %>% dplyr::select(bladelen,bladewid,petiole)
+splomvar2 <- dat5_2 %>% dplyr::select(loglen,logwid,logpet)
+spm(splomvar1, pch=c(16, 16),
+    diagonal="none", smoother=FALSE,
+    reg.line=FALSE, col = "#00660030")
+spm(splomvar2, pch=c(16, 16),
+    diagonal="none", smoother=FALSE,
+    reg.line=FALSE, col = "#00000040")
+```
+
+#### Answer to 5.2.(b)
+
+* **arch** is either 0 or 1. Looking at the graphs again, it seems that arch has little effect on the relationship between 3 variables without logarithms
+* After using logarithms, **arch** has little effect on the relationship between loglen and logwid; while it has slightly more effect on the relationship between loglen and logpet, logwid and logpet comparing with what we've seen between logwid and loglen
+
+```{r 5_2b, echo=TRUE}
+spm(splomvar1, pch=c(16, 16),
+    diagonal="none", smoother=FALSE,
+    reg.line=FALSE, groups = dat5_2$arch)
+spm(splomvar2, pch=c(16, 16),
+    diagonal="none", smoother=FALSE,
+    reg.line=FALSE, groups = dat5_2$arch)
+```

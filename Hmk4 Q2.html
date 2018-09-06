@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Seconds</title>
+    <script src="https://d3js.org/d3.v4.min.js"> ></script>
+
+	</head>
+	<body>
+    <h3>Click here to update</h3>
+    
+		<script type="text/javascript">
+
+			//Width and height
+			var w = 400;
+			var h = 400;
+    
+      var margin = {top: 25, right: 25, bottom: 25, left: 25};
+      var innerHeight = h - margin.top - margin.bottom;
+      var innerWidth = w - margin.left - margin.right; 
+        
+      var d = new Date();
+      var seconds = d.getSeconds();
+      
+      var dataset = d3.range(seconds)
+          .map( () => ({x: Math.floor(Math.random() * innerWidth),
+                        y: Math.floor(Math.random() * innerHeight)}) );
+        
+    // Create SVG element
+	  var svg = d3.select("body")
+		  .append("svg")
+		  .attr("width", w)
+		  .attr("height", h);
+        
+    // Add background rectangle
+		  
+      svg.append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", w)
+          .attr("height", h)
+          .attr("fill", "lightblue");
+          
+    // Add initial circles
+    
+      var dotdata = dataset;
+        
+      var dots = svg.append("g")
+          .attr("id", "plot")   
+          .attr("transform", `translate (${margin.left}, ${margin.top})`)                    
+          .selectAll("dot")
+          .data(dotdata);
+          
+      dots.enter().append("circle")
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y)
+          .attr("r", 9)
+          .attr("fill", "red");    
+        
+    // General Update Pattern (triggered on click)
+      function update(data){
+         var ndot = svg.select("#plot")
+             .selectAll("circle")
+             .data(data);
+             
+         ndot.enter().append("circle")
+             .attr("cx",d => d.x)
+             .attr("cy",d => d.y)
+             .attr("r",9)
+             .attr("fill", "blue")
+             .merge(ndot)
+             .transition()
+             .duration(1000)
+             .attr("fill", "yellow")
+             .transition()
+             .duration(1000)
+             .attr("fill", "red");
+                
+         ndot.exit()
+             .transition()
+             .duration(2000)
+             .attr("cy", d => 10000)
+             .remove();
+        }       
+
+        d3.select('h3')
+          .on('click', function() {
+            
+          var d = new Date();
+          var seconds = d.getSeconds();
+          var newdata = d3.range(seconds)
+              .map( () => ({x: Math.floor(Math.random() * innerWidth),
+                            y: Math.floor(Math.random() * innerHeight)}) );
+            
+          update(newdata);
+          
+        });
+                               
+    
+		</script>
+	</body>
+</html>
